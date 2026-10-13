@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Impossible Ice Cube - A hilarious and frantic arcade physics game where you must drag a melting ice cube into a teleporting freezer before it turns to water!">
+  <meta name="theme-color" content="#0a192f">
+  <title>Impossible Ice Cube 🧊 | The Ultimate Meltdown Arcade Challenge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Ambient Particle & Effects Canvas -->
+  <canvas id="fxCanvas"></canvas>
+
+  <div id="gameApp" class="app-container">
+    <!-- Top HUD Bar -->
+    <header id="gameHud" class="hud-bar hidden">
+      <div class="hud-group">
+        <div class="hud-card">
+          <span class="hud-label">LEVEL</span>
+          <span id="levelDisplay" class="hud-val">1</span>
+        </div>
+        <div class="hud-card">
+          <span class="hud-label">SCORE</span>
+          <span id="scoreDisplay" class="hud-val">0</span>
+        </div>
+        <div class="hud-card hide-mobile">
+          <span class="hud-label">BEST</span>
+          <span id="bestScoreDisplay" class="hud-val">0</span>
+        </div>
+      </div>
+
+      <!-- Melting Bar Centerpiece -->
+      <div class="melt-meter-container">
+        <div class="melt-header">
+          <span class="melt-title">🧊 MELT INTEGRITY</span>
+          <span id="meltPercentDisplay" class="melt-pct">100%</span>
+        </div>
+        <div class="melt-track">
+          <div id="meltFill" class="melt-fill"></div>
+          <div class="melt-glint"></div>
+        </div>
+        <div id="statusAlert" class="status-alert">DODGES LEFT: <span id="dodgesDisplay">3</span></div>
+      </div>
+
+      <!-- Right HUD Controls -->
+      <div class="hud-group">
+        <button id="soundBtn" class="hud-btn" title="Toggle Sound [M]" aria-label="Toggle Sound">
+          <span id="soundIcon">🔊</span>
+        </button>
+        <button id="pauseBtn" class="hud-btn" title="Pause Game [Space]" aria-label="Pause Game">
+          <span>⏸️</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Game Playfield Container -->
+    <main id="arenaWrapper" class="arena-wrapper">
+      <div id="arena" class="arena">
+        <!-- Floor grid & frost effects -->
+        <div class="arena-frost-overlay"></div>
+        <div class="arena-grid"></div>
+
+        <!-- Heatwave visual banner overlay -->
+        <div id="heatwaveBanner" class="heatwave-banner hidden">
+          <span>🔥 HEATWAVE! TRIPLE MELT RATE! 🔥</span>
+        </div>
+
+        <!-- Teleport Blast Indicator ring -->
+        <div id="teleportRing" class="teleport-ring"></div>
+
+        <!-- Power-up Item (Dynamically placed) -->
+        <div id="powerup" class="powerup hidden">
+          <div class="powerup-aura"></div>
+          <div id="powerupIcon" class="powerup-icon">❄️</div>
+          <div id="powerupBadge" class="powerup-badge">FREEZE</div>
+        </div>
+
+        <!-- Decoy Freezer (For tricks) -->
+        <div id="decoyFreezer" class="freezer decoy hidden">
+          <div class="freezer-shadow"></div>
+          <div class="freezer-body">
+            <div class="freezer-frost"></div>
+            <div class="freezer-door">
+              <div class="freezer-handle"></div>
+              <div class="freezer-glow"></div>
+            </div>
+            <div class="freezer-screen">DECOY! 👻</div>
+          </div>
+        </div>
+
+        <!-- Real Target Freezer -->
+        <div id="freezer" class="freezer">
+          <div class="freezer-shadow"></div>
+          <div class="freezer-frost-aura"></div>
+          <div class="freezer-body">
+            <div class="freezer-vents">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="freezer-door" id="freezerDoor">
+              <div class="freezer-window">
+                <div class="frost-crystals"></div>
+                <div class="freezer-interior-glow"></div>
+              </div>
+              <div class="freezer-handle"></div>
+            </div>
+            <div class="freezer-screen" id="freezerScreen">
+              <span id="freezerText">STAY AWAY!</span>
+            </div>
+            <div class="freezer-cold-vapor"></div>
+          </div>
+        </div>
+
+        <!-- Draggable Ice Cube Entity -->
+        <div id="iceCube" class="ice-cube" role="button" tabindex="0" aria-label="Draggable Ice Cube">
+          <div class="cube-shadow" id="cubeShadow"></div>
+          <div class="cube-puddle" id="cubePuddle"></div>
+          <div class="cube-wrapper" id="cubeWrapper">
+            <div class="cube-core">
+              <div class="cube-glare"></div>
+              <div class="cube-cracks" id="cubeCracks"></div>
+              <!-- Expressive Face -->
+              <div class="cube-face" id="cubeFace">
+                <div class="eye left-eye"><div class="pupil"></div></div>
+                <div class="eye right-eye"><div class="pupil"></div></div>
+                <div class="mouth" id="cubeMouth"></div>
+              </div>
+              <div class="cube-frost-spec"></div>
+            </div>
+            <div class="cube-melting-drips" id="dripsContainer"></div>
+          </div>
+          <div class="drag-hint-pulse" id="dragPulse"></div>
+        </div>
+
+        <!-- Floating floating text canvas / notifications -->
+        <div id="floatingTextContainer" class="floating-text-container"></div>
+      </div>
+    </main>
+
+    <!-- Modal Overlays -->
+    <!-- 1. Start / Main Menu Screen -->
+    <div id="menuScreen" class="overlay-modal active">
+      <div class="modal-card menu-card">
+        <div class="ice-badge-header">ARCADE PHYSICS CHALLENGE</div>
+        <h1 class="game-title">
+          <span class="title-ice">IMPOSSIBLE</span>
+          <span class="title-sub">ICE CUBE <span class="ice-emoji">🧊</span></span>
+        </h1>
+        <p class="tagline">Drag the melting ice cube into the freezer before it turns into soup. <em>Watch out—the freezer teleports away!</em></p>
+
+        <!-- Difficulty Selection -->
+        <div class="difficulty-section">
+          <label class="diff-title">CHOOSE DIFFICULTY:</label>
+          <div class="diff-buttons">
+            <button class="diff-btn" data-diff="easy">
+              <span class="diff-name">EASY</span>
+              <span class="diff-desc">2 Teleports • Slow Melt</span>
+            </button>
+            <button class="diff-btn active" data-diff="normal">
+              <span class="diff-name">NORMAL</span>
+              <span class="diff-desc">4 Teleports • Fair Chill</span>
+            </button>
+            <button class="diff-btn" data-diff="hard">
+              <span class="diff-name">HARD</span>
+              <span class="diff-desc">6 Teleports • Decoys • Fast</span>
+            </button>
+            <button class="diff-btn diff-impossible" data-diff="impossible">
+              <span class="diff-name">IMPOSSIBLE 🔥</span>
+              <span class="diff-desc">8 Teleports • Heatwaves!</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="menu-actions">
+          <button id="playBtn" class="btn-primary">
+            <span class="btn-glow"></span>
+            <span class="btn-text">PLAY NOW ▶</span>
+          </button>
+          <button id="howToPlayBtn" class="btn-secondary">
+            <span>HOW TO PLAY 📖</span>
+          </button>
+        </div>
+
+        <div class="high-score-strip">
+          <span>🏆 HIGH SCORE: <strong id="menuBestScore">0</strong></span>
+          <span class="sep">•</span>
+          <span>🎮 MOUSE / TOUCH / WASD</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. How To Play Modal -->
+    <div id="helpScreen" class="overlay-modal hidden">
+      <div class="modal-card help-card">
+        <h2>HOW TO PLAY 🧊</h2>
+        <div class="instructions-grid">
+          <div class="inst-item">
+            <div class="inst-icon">👆</div>
+            <div class="inst-text">
+              <strong>Drag The Cube</strong>
+              <p>Click/touch & drag the ice cube across the frosty floor. Notice the slippery momentum!</p>
+            </div>
+          </div>
+          <div class="inst-item">
+            <div class="inst-icon">🚪💨</div>
+            <div class="inst-text">
+              <strong>Outsmart The Freezer</strong>
+              <p>The freezer panics and teleports when you get close. Exhaust its dodges or corner it!</p>
+            </div>
+          </div>
+          <div class="inst-item">
+            <div class="inst-icon">❄️</div>
+            <div class="inst-text">
+              <strong>Grab Power-Ups</strong>
+              <p>Catch Freeze Clocks to immobilize the freezer or Ice Packs to restore melting time.</p>
+            </div>
+          </div>
+          <div class="inst-item">
+            <div class="inst-icon">⏱️🔥</div>
+            <div class="inst-text">
+              <strong>Beat The Meltdown</strong>
+              <p>If your ice integrity drops to 0%, you melt into a puddle. Deliver it chilled!</p>
+            </div>
+          </div>
+        </div>
+        <div class="inst-keys">
+          <span><strong>Keyboard shortcuts:</strong> [Space] = Pause, [R] = Restart, [M] = Mute Audio</span>
+        </div>
+        <button id="closeHelpBtn" class="btn-primary">GOT IT, LET'S FREEZE!</button>
+      </div>
+    </div>
+
+    <!-- 3. Pause Screen -->
+    <div id="pauseScreen" class="overlay-modal hidden">
+      <div class="modal-card pause-card">
+        <h2>GAME PAUSED ⏸️</h2>
+        <p>Catch your breath! The ice cube is safely frozen in stasis.</p>
+        <div class="pause-actions">
+          <button id="resumeBtn" class="btn-primary">RESUME [SPACE]</button>
+          <button id="restartPauseBtn" class="btn-secondary">RESTART ROUND [R]</button>
+          <button id="menuPauseBtn" class="btn-tertiary">MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Victory / Round Cleared Screen -->
+    <div id="victoryScreen" class="overlay-modal hidden">
+      <div class="modal-card win-card">
+        <div class="win-sparkle">✨🧊🎉</div>
+        <h2 class="win-title">SAVED FROM MELTING!</h2>
+        <p class="win-subtitle" id="winSubText">The freezer ran out of teleports and you made it in!</p>
+
+        <div class="score-breakdown">
+          <div class="score-row">
+            <span>Delivery Points:</span>
+            <span id="winDeliveryScore">+500</span>
+          </div>
+          <div class="score-row">
+            <span>Remaining Ice Bonus:</span>
+            <span id="winIceBonus">+320</span>
+          </div>
+          <div class="score-row">
+            <span>Speed Time Bonus:</span>
+            <span id="winSpeedBonus">+150</span>
+          </div>
+          <div class="score-row total">
+            <span>Round Total:</span>
+            <span id="winRoundScore">970</span>
+          </div>
+        </div>
+
+        <div class="win-actions">
+          <button id="nextLevelBtn" class="btn-primary">NEXT ROUND ⏩</button>
+          <button id="winMenuBtn" class="btn-secondary">MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Game Over / Melted Screen -->
+    <div id="gameOverScreen" class="overlay-modal hidden">
+      <div class="modal-card over-card">
+        <div class="over-emoji">💧🫠💀</div>
+        <h2 class="over-title">TOTAL MELTDOWN!</h2>
+        <p class="over-subtitle" id="overReason">You turned into a warm puddle of water before reaching the freezer!</p>
+
+        <div class="over-stats">
+          <div class="stat-box">
+            <span class="stat-lbl">FINAL SCORE</span>
+            <span class="stat-val" id="finalScoreVal">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-lbl">ROUNDS SURVIVED</span>
+            <span class="stat-val" id="roundsSurvivedVal">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-lbl">ALL-TIME BEST</span>
+            <span class="stat-val" id="overBestScoreVal">0</span>
+          </div>
+        </div>
+
+        <div class="over-actions">
+          <button id="retryBtn" class="btn-primary">
+            <span class="btn-glow"></span>
+            <span class="btn-text">TRY AGAIN [R] 🔄</span>
+          </button>
+          <button id="overMenuBtn" class="btn-secondary">MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
